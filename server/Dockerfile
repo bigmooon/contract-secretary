@@ -1,0 +1,106 @@
+# Base stage
+FROM node:20-alpine AS base
+
+# Install build dependencies for native modules (bcrypt, etc.)
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    openssl-dev
+
+# Install pnpm and nest CLI globally
+RUN corepack enable && corepack prepare pnpm@latest --activate && \
+    npm install -g @nestjs/cli
+
+WORKDIR /app
+
+# Dependencies stage
+FROM base AS dependencies
+
+# Copy package.json
+COPY package.json ./
+
+# Create prisma directory (will be empty if no prisma schema exists)
+RUN mkdir -p prisma
+
+# Install dependencies (allow scripts for bcrypt)
+RUN pnpm install --no-frozen-lockfile
+
+# Development stage
+FROM base AS development
+
+WORKDIR /app
+
+# Copy node_modules from dependencies stage
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# Copy package.json
+COPY package.json ./
+
+# Copy source code
+COPY . .
+
+# Expose port
+EXPOSE 3000
+
+# Start development server (use pnpm exec to ensure nest CLI is in PATH)
+CMD ["pnpm", "exec", "nest", "start", "--watch"]
+
+# Builder stage for production
+FROM base AS builder
+
+WORKDIR /app
+
+# Copy node_modules from dependencies stage
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# Copy package.json
+COPY package.json ./
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN pnpm build
+
+# Production stage
+FROM node:20-alpine AS production
+
+WORKDIR /app
+
+# Set to production environment
+ENV NODE_ENV=production
+
+# Install runtime dependencies only (not build tools)
+RUN apk add --no-cache openssl
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy package.json
+COPY package.json ./
+
+# Create prisma directory
+RUN mkdir -p prisma
+
+# Install only production dependencies
+RUN pnpm install --prod --no-frozen-lockfile
+
+# Copy built application from builder stage
+COPY --from=builder /app/dist ./dist
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Change ownership of app directory
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+# Expose port
+EXPOSE 3000
+
+# Start production server
+CMD ["node", "dist/main"]

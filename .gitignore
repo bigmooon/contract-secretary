@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+web-build/
+.expo/
+.expo-shared/
+
+# Environment variables
+.env
+.env.local
+.env.dev
+.env.prod
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc
+etc/
+
+# Claude Code configuration
+.claude/
+
+# Database diagrams
+*.erd.json
+
+# Prisma generated files
+**/prisma/generated/
+
+# Docker volumes
+postgres-data/

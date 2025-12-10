@@ -1,0 +1,25 @@
+{
+  "name": "contract-secretary",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "client:start": "pnpm --filter client start",
+    "client:android": "pnpm --filter client android",
+    "client:ios": "pnpm --filter client ios",
+    "client:web": "pnpm --filter client web",
+    "server:start": "pnpm --filter server start",
+    "server:dev": "pnpm --filter server start:dev",
+    "server:build": "pnpm --filter server build",
+    "install:all": "pnpm install",
+    "docker:up": "docker-compose --env-file .env.dev up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:status": "docker-compose ps",
+    "docker:clean": "docker-compose down -v",
+    "docker:prod": "docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d --build",
+    "docker:prod:down": "docker-compose -f docker-compose.prod.yml down"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.2"
+  }
+}

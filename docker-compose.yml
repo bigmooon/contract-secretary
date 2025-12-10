@@ -1,0 +1,63 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17-alpine
+    container_name: contract_secretary_local_db
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - contract-secretary-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # backend
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: development
+    container_name: contract-secretary-server
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PORT}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+    volumes:
+      # Mount source code for hot reload in development
+      - ./server/src:/app/src
+      - ./server/package.json:/app/package.json
+      - ./server/tsconfig.json:/app/tsconfig.json
+      - ./server/nest-cli.json:/app/nest-cli.json
+      # Don't mount node_modules - let it come from the image
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - contract-secretary-network
+    command: ['pnpm', 'run', 'start:dev']
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  server_node_modules:
+    driver: local
+
+networks:
+  contract-secretary-network:
+    driver: bridge
