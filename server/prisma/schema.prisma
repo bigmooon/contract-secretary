@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ========================================================
+// Enum
+// ========================================================
+
+enum Provider {
+  LOCAL
+  NAVER
+}
+
+enum ContractType {
+  JEONSE
+  WOLSE
+  MAEMAE
+}
+
+enum ContractStatus {
+  ACTIVE // 진행 중
+  EXPIRED // 만료
+  RENEWED // 갱신
+  TERMINATED // 종료
+}
+
+enum AlertType {
+  D7
+  D30
+  D90
+}
+
+// 이해관계자 역할
+enum StakeholderRole {
+  OWNER
+  TENANT
+}
+
+enum SyncStatus {
+  SUCCESS
+  FAILED
+  PENDING
+}
+
+// ========================================================
+// Model
+// ========================================================
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+
+  email    String? @unique @db.VarChar(100)
+  password String?
+  name     String  @db.VarChar(50)
+
+  provider Provider @default(LOCAL)
+
+  naverId           String? @unique @map("naver_id") @db.VarChar(50)
+  naverAccessToken  String? @map("naver_access_token") @db.Text
+  naverRefreshToken String? @map("naver_refresh_token") @db.Text
+
+  pushToken String? @map("push_token")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // relations
+  properties    Property[]
+  csvImportLogs CsvImportLog[]
+
+  @@map("users")
+}
+
+model Property {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  complexName  String  @map("complex_name") @db.VarChar(100)
+  buildingName String  @map("building_name") @db.VarChar(20)
+  unitNo       String  @map("unit_no") @db.VarChar(20)
+  typeInfo     String? @map("type_info") @db.VarChar(50)
+
+  note      String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // relations
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contracts Contract[]
+
+  @@map("properties")
+}
+
+model Contract {
+  id         String @id @default(uuid()) @db.Uuid
+  propertyId String @map("property_id") @db.Uuid
+
+  contractType   ContractType   @map("contract_type")
+  depositPrice   BigInt         @map("deposit_price")
+  monthlyRent    BigInt         @default(0) @map("monthly_rent")
+  contractDate   DateTime?      @map("contract_date") @db.Date
+  expirationDate DateTime?      @map("expiration_date") @db.Date
+  status         ContractStatus @default(ACTIVE)
+  memo           String?        @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // relations
+  property            Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  alerts              Alert[]
+  stakeholders        Stakeholder[]
+  naverCalendarEvents NaverCalendarEvent[]
+
+  @@map("contracts")
+}
+
+model Alert {
+  id         String @id @default(uuid()) @db.Uuid
+  contractId String @map("contract_id") @db.Uuid
+
+  alertType   AlertType @map("alert_type")
+  scheduledAt DateTime  @map("scheduled_at") @db.Date
+  isSent      Boolean   @default(false) @map("is_sent")
+  sentAt      DateTime? @map("sent_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // relations
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@map("alerts")
+}
+
+model Stakeholder {
+  id         String @id @default(uuid()) @db.Uuid
+  contractId String @map("contract_id") @db.Uuid
+
+  role  StakeholderRole
+  name  String?         @db.VarChar(50)
+  phone String          @db.VarChar(20)
+
+  // relations
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@map("stakeholders")
+}
+
+model NaverCalendarEvent {
+  id         String @id @default(uuid()) @db.Uuid
+  contractId String @map("contract_id") @db.Uuid
+
+  naverEventId String     @map("naver_event_id") @db.VarChar(100)
+  syncStatus   SyncStatus @default(SUCCESS) @map("sync_status")
+  syncedAt     DateTime   @default(now()) @map("synced_at")
+
+  // relations
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@map("naver_calendar_events")
+}
+
+model CsvImportLog {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  fileName     String @map("file_name")
+  totalRows    Int    @default(0) @map("total_rows")
+  successCount Int    @default(0) @map("success_count")
+  failedCount  Int    @default(0) @map("failed_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("csv_import_logs")
+}
