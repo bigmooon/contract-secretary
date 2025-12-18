@@ -71,6 +71,7 @@ model User {
   // relations
   properties    Property[]
   csvImportLogs CsvImportLog[]
+  refreshTokens RefreshToken[]
 
   @@map("users")
 }
@@ -178,4 +179,22 @@ model CsvImportLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("csv_import_logs")
+}
+
+model RefreshToken {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  token     String   @unique @db.VarChar(500)
+  expiresAt DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("refresh_tokens")
 }
