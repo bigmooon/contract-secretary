@@ -36,13 +36,15 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      REFRESH_TOKEN_EXPIRES_DAYS: ${REFRESH_TOKEN_EXPIRES_DAYS:-30}
     volumes:
       # Mount source code for hot reload in development
       - ./server/src:/app/src
       - ./server/package.json:/app/package.json
       - ./server/tsconfig.json:/app/tsconfig.json
       - ./server/nest-cli.json:/app/nest-cli.json
-      # Don't mount node_modules - let it come from the image
+      # Don't mount node_modules - use the one from the container image
+      # This prevents host node_modules from overriding container's installed dependencies
     depends_on:
       postgres:
         condition: service_healthy
