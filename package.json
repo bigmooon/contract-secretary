@@ -19,10 +19,7 @@
     "docker:up": "docker-compose --env-file .env up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
-    "docker:status": "docker-compose ps",
-    "docker:clean": "docker-compose down -v",
-    "docker:prod": "docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d --build",
-    "docker:prod:down": "docker-compose -f docker-compose.prod.yml down"
+    "docker:rebuild": "docker-compose down -v && docker-compose --env-file .env build --no-cache && docker-compose --env-file .env up -d"
   },
   "devDependencies": {
     "typescript": "~5.9.2"
