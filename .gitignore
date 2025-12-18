@@ -57,8 +57,9 @@ etc/
 # Database diagrams
 *.erd.json
 
-# Prisma generated files
-**/prisma/generated/
+# Prisma generated files 
+**/generated/prisma/
+*.sql
 
 # Docker volumes
 postgres-data/
