@@ -20,22 +20,32 @@ FROM base AS dependencies
 # Copy package.json
 COPY package.json ./
 
-# Create prisma directory (will be empty if no prisma schema exists)
-RUN mkdir -p prisma
+# Copy prisma schema and config
+COPY prisma ./prisma
 
 # Install dependencies (allow scripts for bcrypt)
 RUN pnpm install --no-frozen-lockfile
+
+# Generate Prisma Client
+RUN pnpm prisma:generate
 
 # Development stage
 FROM base AS development
 
 WORKDIR /app
 
-# Copy node_modules from dependencies stage
+# Copy node_modules from dependencies stage (includes Prisma Client)
 COPY --from=dependencies /app/node_modules ./node_modules
 
 # Copy package.json
 COPY package.json ./
+
+# Copy prisma schema (for potential regeneration)
+COPY prisma ./prisma
+
+# Regenerate Prisma Client in development stage to ensure it's available
+# This ensures the generated directory exists even if it wasn't copied from host
+RUN pnpm prisma:generate
 
 # Copy source code
 COPY . .
@@ -51,11 +61,17 @@ FROM base AS builder
 
 WORKDIR /app
 
-# Copy node_modules from dependencies stage
+# Copy node_modules from dependencies stage (includes Prisma Client)
 COPY --from=dependencies /app/node_modules ./node_modules
 
 # Copy package.json
 COPY package.json ./
+
+# Copy prisma schema
+COPY prisma ./prisma
+
+# Regenerate Prisma Client in builder stage to ensure it's available
+RUN pnpm prisma:generate
 
 # Copy source code
 COPY . .
@@ -85,6 +101,10 @@ RUN mkdir -p prisma
 
 # Install only production dependencies
 RUN pnpm install --prod --no-frozen-lockfile
+
+# Copy Prisma Client from builder stage (needed at runtime)
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
