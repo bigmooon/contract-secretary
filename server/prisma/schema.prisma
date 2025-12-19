@@ -69,9 +69,10 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // relations
-  properties    Property[]
-  csvImportLogs CsvImportLog[]
-  refreshTokens RefreshToken[]
+  properties         Property[]
+  csvImportLogs      CsvImportLog[]
+  refreshTokens      RefreshToken[]
+  authorizationCodes AuthorizationCode[]
 
   @@map("users")
 }
@@ -197,4 +198,24 @@ model RefreshToken {
   @@index([token])
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+// PKCE Authorization Code for secure OAuth token exchange
+model AuthorizationCode {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  code          String   @unique @db.VarChar(128)
+  codeChallenge String   @map("code_challenge") @db.VarChar(128) // SHA256 hash of code_verifier
+  expiresAt     DateTime @map("expires_at")
+  isUsed        Boolean  @default(false) @map("is_used")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@index([userId])
+  @@map("authorization_codes")
 }
