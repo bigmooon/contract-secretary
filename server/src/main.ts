@@ -2,10 +2,25 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import 'dotenv/config';
+import session from 'express-session';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // session middleware for OAuth state parameter (CSRF protection)
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || 'default-session-secret-change-me',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 10 * 60 * 1000, // 10 minutes for oauth flow
+      },
+    }),
+  );
 
   app.useGlobalPipes(
     new ValidationPipe({
