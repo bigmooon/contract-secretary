@@ -3,6 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CryptoModule } from './common/crypto';
 import { AuthModule } from './modules/auth/auth.module';
+import { ContractsModule } from './modules/contracts/contracts.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -14,6 +15,7 @@ import { PrismaModule } from './prisma/prisma.module';
     AuthModule,
     UsersModule,
     PropertiesModule,
+    ContractsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
