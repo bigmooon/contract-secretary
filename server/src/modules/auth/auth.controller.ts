@@ -77,6 +77,11 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({
+    status: 400,
+    description: '올바르지 않은 요청입니다.',
+    type: MessageResponseDto,
+  })
+  @ApiResponse({
     status: 401,
     description: '로그인이 실패했습니다.',
     type: MessageResponseDto,
@@ -93,6 +98,11 @@ export class AuthController {
     status: 200,
     description: '토큰이 갱신되었습니다.',
     type: TokenResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: '올바르지 않은 요청입니다.',
+    type: MessageResponseDto,
   })
   @ApiResponse({
     status: 401,
@@ -113,6 +123,11 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: '로그아웃이 완료되었습니다.',
+    type: MessageResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: '올바르지 않은 요청입니다.',
     type: MessageResponseDto,
   })
   @HttpCode(HttpStatus.OK)
@@ -216,6 +231,11 @@ export class AuthController {
     status: 200,
     description: '토큰 교환이 완료되었습니다.',
     type: AuthResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: '올바르지 않은 요청입니다.',
+    type: MessageResponseDto,
   })
   @ApiResponse({
     status: 401,

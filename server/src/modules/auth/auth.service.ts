@@ -54,10 +54,16 @@ export class AuthService {
     const accessToken = this.generateAccessToken(user);
     const refreshToken = await this.generateRefreshToken(user.id);
 
+    // return only safe user fields (exclude password, tokens, etc.)
     return {
       accessToken,
       refreshToken,
-      user,
+      user: {
+        id: user.id,
+        email: user.email ?? '',
+        name: user.name,
+        provider: user.provider,
+      },
     };
   }
 
@@ -83,10 +89,16 @@ export class AuthService {
     const accessToken = this.generateAccessToken(user);
     const refreshToken = await this.generateRefreshToken(user.id);
 
+    // return only safe user fields (exclude password, tokens, etc.)
     return {
       accessToken,
       refreshToken,
-      user,
+      user: {
+        id: user.id,
+        email: user.email ?? '',
+        name: user.name,
+        provider: user.provider,
+      },
     };
   }
 
