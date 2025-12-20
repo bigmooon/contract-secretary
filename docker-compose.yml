@@ -46,6 +46,7 @@ services:
       - ./server/package.json:/app/package.json
       - ./server/tsconfig.json:/app/tsconfig.json
       - ./server/nest-cli.json:/app/nest-cli.json
+      - ./server/prisma:/app/prisma
       # Don't mount node_modules - use the one from the container image
       # This prevents host node_modules from overriding container's installed dependencies
     depends_on:
@@ -53,7 +54,7 @@ services:
         condition: service_healthy
     networks:
       - contract-secretary-network
-    command: ['pnpm', 'run', 'start:dev']
+    command: ['sh', '-c', 'pnpm prisma:migrate:dev && pnpm start:dev']
 
 volumes:
   postgres_data:
