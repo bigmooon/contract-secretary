@@ -4,10 +4,9 @@
     "slug": "contract-secretary",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/icons/logo-icon.svg",
     "scheme": "contractsecretary",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -31,19 +30,30 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/icons/logo-lockup.svg",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#2C3E50",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#2C3E50"
           }
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIdPermission": "Allow 계약비서 to access your Face ID"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "apiUrl": "${EXPO_PUBLIC_API_URL}",
+      "releaseChannel": "${NODE_ENV}"
     }
   }
 }
