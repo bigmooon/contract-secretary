@@ -47,13 +47,18 @@ COPY prisma ./prisma
 # This ensures the generated directory exists even if it wasn't copied from host
 RUN pnpm prisma:generate
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
+
 # Copy source code
 COPY . .
 
 # Expose port
 EXPOSE 3000
 
-# Start development server (use pnpm exec to ensure nest CLI is in PATH)
+# Use entrypoint to run migrations before starting the app
+ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["pnpm", "exec", "nest", "start", "--watch"]
 
 # Builder stage for production
@@ -109,6 +114,13 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 
+# Copy prisma schema and migrations for production
+COPY --from=builder /app/prisma ./prisma
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
+
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
@@ -122,5 +134,6 @@ USER nodejs
 # Expose port
 EXPOSE 3000
 
-# Start production server
+# Use entrypoint to run migrations before starting the app
+ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "dist/main"]

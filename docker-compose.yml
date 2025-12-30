@@ -4,6 +4,8 @@ services:
     image: postgres:17-alpine
     container_name: contract_secretary_local_db
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - '5432:5432'
     environment:
@@ -28,6 +30,8 @@ services:
       target: development
     container_name: contract-secretary-server
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - '3000:3000'
     environment:
@@ -39,13 +43,17 @@ services:
       REFRESH_TOKEN_EXPIRES_DAYS: ${REFRESH_TOKEN_EXPIRES_DAYS:-30}
       NAVER_CLIENT_ID: ${NAVER_CLIENT_ID}
       NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET}
-      NAVER_CALLBACK_URL: ${NAVER_CALLBACK_URL}
+      NAVER_CALLBACK_URL: ${NAVER_CALLBACK_URL:-http://localhost:3000/auth/naver/callback}
+      CLIENT_CALLBACK_URL: ${CLIENT_CALLBACK_URL:-}
     volumes:
       # Mount source code for hot reload in development
       - ./server/src:/app/src
       - ./server/package.json:/app/package.json
       - ./server/tsconfig.json:/app/tsconfig.json
       - ./server/nest-cli.json:/app/nest-cli.json
+      - ./server/prisma:/app/prisma
+      # Mount .env file from project root to container
+      - ./.env:/app/.env:ro
       # Don't mount node_modules - use the one from the container image
       # This prevents host node_modules from overriding container's installed dependencies
     depends_on:
