@@ -22,6 +22,13 @@ const MAPPING = {
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
   calendar: 'calendar-today',
+  'list.bullet': 'format-list-bulleted',
+  'gearshape.fill': 'settings',
+  plus: 'add',
+  'trash.fill': 'delete',
+  'pencil': 'edit',
+  'phone.fill': 'phone',
+  'xmark': 'close',
 } as IconMapping;
 
 /**
