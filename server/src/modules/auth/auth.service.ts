@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -20,6 +21,8 @@ import { JwtPayload } from './interfaces';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -172,167 +175,45 @@ export class AuthService {
   }> {
     const { accessToken, refreshToken, profile } = naverPayload;
 
-    // Find existing user by Naver ID
-    let user = await this.usersService.findByNaverId(profile.id);
+    try {
+      // Find existing user by Naver ID
+      let user = await this.usersService.findByNaverId(profile.id);
 
-    if (user) {
-      // Update Naver tokens and profile for existing user
-      user = await this.usersService.updateNaverTokens(
-        user.id,
-        accessToken,
-        refreshToken,
-        { email: profile.email, displayName: profile.displayName },
-      );
-    } else {
-      // Create new user from Naver profile
-      user = await this.usersService.createNaverUser({
-        id: profile.id,
-        displayName: profile.displayName,
-        email: profile.email,
-        accessToken,
-        refreshToken,
-      });
-    }
+      if (user) {
+        // Update Naver tokens and profile for existing user
+        user = await this.usersService.updateNaverTokens(
+          user.id,
+          accessToken,
+          refreshToken,
+          { email: profile.email, displayName: profile.displayName },
+        );
+      } else {
+        // Create new user from Naver profile
+        user = await this.usersService.createNaverUser({
+          id: profile.id,
+          displayName: profile.displayName,
+          email: profile.email,
+          accessToken,
+          refreshToken,
+        });
+      }
 
-    return {
-      id: user.id,
-      email: user.email ?? '',
-      name: user.name,
-      provider: user.provider,
-    };
-  }
-
-  /**
-   * generate jwt tokens for naver oauth user
-   */
-  async naverLogin(naverPayload: NaverUserPayload): Promise<AuthResponseDto> {
-    const user = await this.validateNaverUser(naverPayload);
-
-    const accessToken = this.generateAccessToken(user);
-    const refreshToken = await this.generateRefreshToken(user.id);
-
-    return {
-      accessToken,
-      refreshToken,
-      user,
-    };
-  }
-
-  /**
-   * Validate Naver user and generate a short-lived authorization code for PKCE flow
-   * @param naverPayload Naver user payload from OAuth callback
-   * @param codeChallenge SHA256 hash of the code_verifier from client for PKCE flow
-   * @returns Authorization code to be exchanged for tokens
-   */
-  async naverLoginWithPKCE(
-    naverPayload: NaverUserPayload,
-    codeChallenge: string,
-  ): Promise<string> {
-    const user = await this.validateNaverUser(naverPayload);
-    return this.generateAuthorizationCode(user.id, codeChallenge);
-  }
-
-  /**
-   * Exchange authorization code for JWT tokens (PKCE flow)
-   * @param code Authorization code from OAuth callback
-   * @param codeVerifier Original code_verifier from client
-   * @returns JWT access and refresh tokens
-   */
-  async exchangeCodeForTokens(
-    code: string,
-    codeVerifier: string,
-  ): Promise<AuthResponseDto> {
-    // 1. Find the authorization code
-    const authCode = await this.prisma.authorizationCode.findUnique({
-      where: { code },
-      include: { user: true },
-    });
-
-    // 2. Validate code exists
-    if (!authCode) {
-      throw new UnauthorizedException('Invalid authorization code');
-    }
-
-    // 3. Check if code is already used (replay attack prevention)
-    if (authCode.isUsed) {
-      // Security: revoke all tokens for this user when code reuse is detected
-      await this.logoutAll(authCode.userId);
-      throw new UnauthorizedException(
-        'Authorization code has already been used',
-      );
-    }
-
-    // 4. Check if code is expired
-    if (new Date() > authCode.expiresAt) {
-      throw new UnauthorizedException('Authorization code has expired');
-    }
-
-    // 5. Verify PKCE: SHA256(code_verifier) must match stored code_challenge
-    const computedChallenge = this.computeCodeChallenge(codeVerifier);
-    if (computedChallenge !== authCode.codeChallenge) {
-      throw new UnauthorizedException('Invalid code_verifier');
-    }
-
-    // 6. Mark code as used
-    await this.prisma.authorizationCode.update({
-      where: { id: authCode.id },
-      data: { isUsed: true },
-    });
-
-    // 7. Generate JWT tokens
-    const user = authCode.user;
-    const accessToken = this.generateAccessToken({
-      id: user.id,
-      email: user.email ?? '',
-      provider: user.provider,
-    });
-    const refreshToken = await this.generateRefreshToken(user.id);
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
+      return {
         id: user.id,
         email: user.email ?? '',
         name: user.name,
         provider: user.provider,
-      },
-    };
-  }
-
-  /**
-   * Generate a short-lived authorization code for PKCE flow
-   */
-  private async generateAuthorizationCode(
-    userId: string,
-    codeChallenge: string,
-  ): Promise<string> {
-    // Generate a secure random code
-    const code = crypto.randomBytes(32).toString('hex');
-
-    // Short expiration: 5 minutes
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 5);
-
-    // Store in database
-    await this.prisma.authorizationCode.create({
-      data: {
-        userId,
-        code,
-        codeChallenge,
-        expiresAt,
-      },
-    });
-
-    return code;
-  }
-
-  /**
-   * Compute SHA256 hash of code_verifier for PKCE verification
-   * Uses S256 method as per RFC 7636
-   */
-  private computeCodeChallenge(codeVerifier: string): string {
-    return crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+      };
+    } catch (error) {
+      console.error('[AuthService] validateNaverUser error:', {
+        message: error?.message,
+        stack: error?.stack,
+        profileId: profile.id,
+        errorName: error?.name,
+        errorCode: error?.code,
+      });
+      throw error;
+    }
   }
 
   /**
@@ -393,14 +274,141 @@ export class AuthService {
   }
 
   /**
-   * clean up expired authorization codes (can be called periodically)
+   * 클라이언트가 네이버에서 직접 받은 authorization code를 사용하여 로그인
+   * 모바일 앱에서 세션 없이 OAuth를 처리할 때 사용
    */
-  async cleanupExpiredAuthCodes(): Promise<number> {
-    const result = await this.prisma.authorizationCode.deleteMany({
-      where: {
-        OR: [{ expiresAt: { lt: new Date() } }, { isUsed: true }],
+  async naverLoginWithCode(
+    code: string,
+    state: string,
+  ): Promise<AuthResponseDto> {
+    this.logger.log('naverLoginWithCode: starting', { codeLength: code.length });
+
+    // 1. 네이버 API로 access token 교환
+    const tokenResponse = await this.exchangeNaverCode(code, state);
+    this.logger.log('naverLoginWithCode: got naver tokens');
+
+    // 2. 네이버 API로 사용자 프로필 조회
+    const profile = await this.getNaverProfile(tokenResponse.access_token);
+    this.logger.log('naverLoginWithCode: got profile', {
+      profileId: profile.id,
+      email: profile.email,
+    });
+
+    // 3. 사용자 검증 및 생성/업데이트
+    const user = await this.validateNaverUser({
+      accessToken: tokenResponse.access_token,
+      refreshToken: tokenResponse.refresh_token,
+      profile: {
+        id: profile.id,
+        displayName: profile.nickname || profile.name || 'Unknown',
+        email: profile.email,
       },
     });
-    return result.count;
+
+    // 4. JWT 토큰 생성
+    const accessToken = this.generateAccessToken(user);
+    const refreshToken = await this.generateRefreshToken(user.id);
+
+    return {
+      accessToken,
+      refreshToken,
+      user,
+    };
+  }
+
+  /**
+   * 네이버 authorization code를 access token으로 교환
+   */
+  private async exchangeNaverCode(
+    code: string,
+    state: string,
+  ): Promise<{
+    access_token: string;
+    refresh_token: string;
+    token_type: string;
+    expires_in: number;
+  }> {
+    const clientId = process.env.NAVER_CLIENT_ID;
+    const clientSecret = process.env.NAVER_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      throw new UnauthorizedException('Naver OAuth credentials not configured');
+    }
+
+    const tokenUrl = 'https://nid.naver.com/oauth2.0/token';
+    const params = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: clientId,
+      client_secret: clientSecret,
+      code,
+      state,
+    });
+
+    const response = await fetch(`${tokenUrl}?${params.toString()}`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      this.logger.error('Naver token exchange failed', {
+        status: response.status,
+        error: errorText,
+      });
+      throw new UnauthorizedException('네이버 토큰 교환에 실패했습니다.');
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      this.logger.error('Naver token exchange error', {
+        error: data.error,
+        errorDescription: data.error_description,
+      });
+      throw new UnauthorizedException(
+        data.error_description || '네이버 인증에 실패했습니다.',
+      );
+    }
+
+    return data;
+  }
+
+  /**
+   * 네이버 access token으로 사용자 프로필 조회
+   */
+  private async getNaverProfile(accessToken: string): Promise<{
+    id: string;
+    email?: string;
+    nickname?: string;
+    name?: string;
+    profile_image?: string;
+  }> {
+    const profileUrl = 'https://openapi.naver.com/v1/nid/me';
+
+    const response = await fetch(profileUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      this.logger.error('Naver profile fetch failed', {
+        status: response.status,
+        error: errorText,
+      });
+      throw new UnauthorizedException('네이버 프로필 조회에 실패했습니다.');
+    }
+
+    const data = await response.json();
+
+    if (data.resultcode !== '00') {
+      this.logger.error('Naver profile error', {
+        resultcode: data.resultcode,
+        message: data.message,
+      });
+      throw new UnauthorizedException('네이버 프로필을 가져올 수 없습니다.');
+    }
+
+    return data.response;
   }
 }

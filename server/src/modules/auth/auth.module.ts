@@ -7,7 +7,6 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { NaverStrategy } from './strategies/naver.strategy';
 
 @Module({
   imports: [
@@ -34,7 +33,6 @@ import { NaverStrategy } from './strategies/naver.strategy';
   providers: [
     AuthService,
     JwtStrategy,
-    NaverStrategy,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
