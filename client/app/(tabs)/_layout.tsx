@@ -1,32 +1,52 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { router, Tabs } from 'expo-router';
+import React, { useEffect } from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { HapticTab } from '@/components/ui/HapticTab';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 import { colors, useColorScheme } from '@/design-system';
+import { useAuthStore } from '@/modules/auth';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated]);
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors[colorScheme ?? 'light'].tabIconSelected,
         headerShown: false,
         tabBarButton: HapticTab,
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: '홈',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol name="house.fill" size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="list"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: '매물 목록',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol name="list.bullet" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: '설정',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol name="gearshape.fill" size={24} color={color} />
+          ),
         }}
       />
     </Tabs>
