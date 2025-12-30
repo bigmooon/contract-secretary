@@ -281,7 +281,9 @@ export class AuthService {
     code: string,
     state: string,
   ): Promise<AuthResponseDto> {
-    this.logger.log('naverLoginWithCode: starting', { codeLength: code.length });
+    this.logger.log('naverLoginWithCode: starting', {
+      codeLength: code.length,
+    });
 
     // 1. 네이버 API로 access token 교환
     const tokenResponse = await this.exchangeNaverCode(code, state);

@@ -290,7 +290,8 @@ export class CsvService {
     const tenantContacts = this.parseContacts(tenantContactRaw);
 
     const note =
-      this.getField(row, ['특이사항, 비고', '특이사항', '비고', 'note']) || null;
+      this.getField(row, ['특이사항, 비고', '특이사항', '비고', 'note']) ||
+      null;
 
     return {
       contractType,
