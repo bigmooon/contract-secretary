@@ -1,13 +1,7 @@
-/**
- * Themed Text Component
- * Text component that automatically adapts to the current color scheme
- * and provides predefined text style variants
- */
-
 import { Text as RNText, type TextProps } from 'react-native';
+import { useThemeColor } from '../theme';
 import type { TextStyle as TextStyleType } from '../tokens/typography';
 import { textStyles } from '../tokens/typography';
-import { useThemeColor } from '../theme';
 
 export type ThemedTextProps = TextProps & {
   /**
@@ -45,14 +39,5 @@ export function Text({
   const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
   const variantStyle = textStyles[variant];
 
-  return (
-    <RNText
-      style={[
-        { color },
-        variantStyle,
-        style,
-      ]}
-      {...rest}
-    />
-  );
+  return <RNText style={[{ color }, variantStyle, style]} {...rest} />;
 }
