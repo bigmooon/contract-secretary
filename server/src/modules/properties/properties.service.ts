@@ -42,6 +42,10 @@ export class PropertiesService {
       search,
       complexName,
       includeContracts,
+      contractType,
+      status,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
     } = query;
     const skip = (page - 1) * limit;
 
@@ -59,13 +63,37 @@ export class PropertiesService {
       ];
     }
 
+    // 계약 유형/상태 필터링
+    if (contractType || status) {
+      where.contracts = {
+        some: {
+          ...(contractType && { contractType }),
+          ...(status && { status }),
+        },
+      };
+    }
+
+    // 정렬 설정
+    let orderBy: Prisma.PropertyOrderByWithRelationInput;
+    if (sortBy === 'expirationDate') {
+      // expirationDate로 정렬 시 계약의 만료일 기준
+      // 단, 계약이 없는 경우 맨 뒤로 정렬되도록 처리 필요
+      orderBy = {
+        contracts: {
+          _count: sortOrder,
+        },
+      };
+    } else {
+      orderBy = { [sortBy]: sortOrder };
+    }
+
     const [total, properties] = await Promise.all([
       this.prisma.property.count({ where }),
       this.prisma.property.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         include: includeContracts
           ? {
               contracts: {
@@ -75,7 +103,7 @@ export class PropertiesService {
                   status: true,
                   expirationDate: true,
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { expirationDate: 'asc' },
               },
             }
           : undefined,
@@ -85,8 +113,26 @@ export class PropertiesService {
     // calc total pages
     const totalPages = Math.ceil(total / limit);
 
+    // expirationDate 정렬 시 클라이언트에서 추가 정렬
+    let sortedProperties = properties;
+    if (sortBy === 'expirationDate' && includeContracts) {
+      sortedProperties = [...properties].sort((a: any, b: any) => {
+        const aDate = a.contracts?.[0]?.expirationDate;
+        const bDate = b.contracts?.[0]?.expirationDate;
+
+        if (!aDate && !bDate) return 0;
+        if (!aDate) return sortOrder === 'asc' ? 1 : -1;
+        if (!bDate) return sortOrder === 'asc' ? -1 : 1;
+
+        const diff = new Date(aDate).getTime() - new Date(bDate).getTime();
+        return sortOrder === 'asc' ? diff : -diff;
+      });
+    }
+
     return {
-      data: properties.map((p) => this.toPropertyResponse(p, includeContracts)),
+      data: sortedProperties.map((p) =>
+        this.toPropertyResponse(p, includeContracts),
+      ),
       meta: {
         page,
         limit,

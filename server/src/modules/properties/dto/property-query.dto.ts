@@ -2,12 +2,15 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
   Max,
   Min,
 } from 'class-validator';
+import { ContractStatus, ContractType } from '@prisma/client';
 
 export class PropertyQueryDto {
   @ApiPropertyOptional({
@@ -58,4 +61,44 @@ export class PropertyQueryDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean({ message: '계약 정보 포함 여부는 boolean이어야 합니다.' })
   includeContracts?: boolean = false;
+
+  @ApiPropertyOptional({
+    enum: ContractType,
+    example: 'JEONSE',
+    description: '계약 유형으로 필터링 (JEONSE, WOLSE, MAEMAE)',
+  })
+  @IsOptional()
+  @IsEnum(ContractType, { message: '올바른 계약 유형이 아닙니다.' })
+  contractType?: ContractType;
+
+  @ApiPropertyOptional({
+    enum: ContractStatus,
+    example: 'ACTIVE',
+    description: '계약 상태로 필터링 (ACTIVE, EXPIRED, RENEWED, TERMINATED)',
+  })
+  @IsOptional()
+  @IsEnum(ContractStatus, { message: '올바른 계약 상태가 아닙니다.' })
+  status?: ContractStatus;
+
+  @ApiPropertyOptional({
+    example: 'createdAt',
+    description: '정렬 기준 (createdAt, expirationDate)',
+    default: 'createdAt',
+  })
+  @IsOptional()
+  @IsIn(['createdAt', 'expirationDate'], {
+    message: '정렬 기준은 createdAt 또는 expirationDate이어야 합니다.',
+  })
+  sortBy?: 'createdAt' | 'expirationDate' = 'createdAt';
+
+  @ApiPropertyOptional({
+    example: 'desc',
+    description: '정렬 순서 (asc, desc)',
+    default: 'desc',
+  })
+  @IsOptional()
+  @IsIn(['asc', 'desc'], {
+    message: '정렬 순서는 asc 또는 desc이어야 합니다.',
+  })
+  sortOrder?: 'asc' | 'desc' = 'desc';
 }
