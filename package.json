@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "client:start": "pnpm --filter client start",
+    "client:start:clear": "pnpm --filter client start:clear",
+    "client:start:tunnel": "pnpm --filter client start:tunnel",
+    "client:start:lan": "pnpm --filter client start:lan",
     "client:android": "pnpm --filter client android",
     "client:ios": "pnpm --filter client ios",
     "client:web": "pnpm --filter client web",
