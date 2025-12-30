@@ -20,19 +20,20 @@ const palette = {
   // Brand colors
   blue400: '#6BA3FF',
   blue500: '#4D8BFF',
-  blue600: '#0040F0',
+  blue600: '#3b82f5',
 
   // Semantic colors - Light
   redLight: '#CA3500',
-  orangeLight: '#FF6900',
-  yellowLight: '#F0B100',
-  greenLight: '#40F000',
+  orangeLight: '#f55200',
+  yellowLight: '#f09400',
+  greenLight: '#21c45d',
+  purpleLight: '#a854f7',
 
   // Semantic colors - Dark
   redDark: '#FF613A',
   orangeDark: '#FF8A3D',
   yellowDark: '#F5C843',
-  greenDark: '#75FF62',
+  greenDark: '#03A94D',
   purpleDark: '#C58AFF',
 
   // Pure colors
@@ -51,15 +52,19 @@ export const colors = {
     background: palette.gray100,
     card: palette.white,
     overlay: 'rgba(0, 0, 0, 0.1)',
+    backdrop: 'rgba(0, 0, 0, 0.5)',
 
-    // Borders
+    // Borders & Dividers
     outline: 'rgba(229, 231, 235, 0.8)',
+    divider: 'rgba(0, 0, 0, 0.08)',
 
     // Text colors
     text: palette.gray700,
     textPrimary: palette.gray950,
     textSecondary: palette.gray500,
+    textTertiary: palette.gray400,
     textInverse: palette.white,
+    placeholder: palette.gray400,
 
     // Navigation
     tabIconDefault: palette.gray500,
@@ -78,7 +83,7 @@ export const colors = {
     yellow: palette.yellowLight,
     green: palette.greenLight,
     blue: palette.blue600,
-    purple: '#B000F0',
+    purple: palette.purpleLight,
   },
 
   dark: {
@@ -89,15 +94,19 @@ export const colors = {
     background: palette.gray900,
     card: palette.gray800,
     overlay: 'rgba(255, 255, 255, 0.08)',
+    backdrop: 'rgba(0, 0, 0, 0.7)',
 
-    // Borders
+    // Borders & Dividers
     outline: 'rgba(229, 231, 235, 0.2)',
+    divider: 'rgba(255, 255, 255, 0.08)',
 
     // Text colors
     text: '#E6ECF2',
     textPrimary: palette.gray50,
     textSecondary: palette.gray300,
+    textTertiary: palette.gray400,
     textInverse: palette.gray900,
+    placeholder: palette.gray500,
 
     // Navigation
     tabIconDefault: palette.gray400,

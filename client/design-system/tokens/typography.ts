@@ -96,11 +96,9 @@ export const textStyles = {
     fontSize: fontSizes.sm,
     lineHeight: fontSizes.sm * lineHeights.normal,
   },
-
-  // Body variations
   bodySemiBold: {
     fontFamily: fontFamilies.semiBold,
-    fontSize: fontSizes.base,
+    fontSize: fontSizes.lg,
     lineHeight: fontSizes.base * lineHeights.normal,
   },
   bodyMedium: {
@@ -124,6 +122,11 @@ export const textStyles = {
     fontFamily: fontFamilies.regular,
     fontSize: fontSizes.base,
     lineHeight: fontSizes.base * lineHeights.loose,
+  },
+  expirationSummary: {
+    fontFamily: fontFamilies.bold,
+    fontSize: fontSizes['5xl'],
+    lineHeight: fontSizes['5xl'] * lineHeights.tight,
   },
 } as const;
 
