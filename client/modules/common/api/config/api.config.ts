@@ -87,6 +87,10 @@ export const API_ENDPOINTS = {
     update: (id: string) => `/contracts/${id}`,
     delete: (id: string) => `/contracts/${id}`,
   },
+  csv: {
+    import: '/csv/import',
+    export: '/csv/export',
+  },
 
   health: '/health',
 } as const;

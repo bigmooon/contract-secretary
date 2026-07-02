@@ -63,3 +63,6 @@ etc/
 
 # Docker volumes
 postgres-data/
+
+# OMC tooling / session state
+**/.omc/
