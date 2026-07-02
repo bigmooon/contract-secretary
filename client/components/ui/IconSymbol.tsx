@@ -29,6 +29,8 @@ const MAPPING = {
   'pencil': 'edit',
   'phone.fill': 'phone',
   'xmark': 'close',
+  'square.and.arrow.down': 'file-download',
+  'square.and.arrow.up': 'file-upload',
 } as IconMapping;
 
 /**
