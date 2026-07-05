@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Body,
   UseInterceptors,
   UploadedFile,
   ParseFilePipe,
@@ -19,9 +20,21 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CsvService } from './csv.service';
-import { CsvImportResponseDto, CsvExportResponseDto } from './dto';
+import {
+  CsvImportResponseDto,
+  CsvExportResponseDto,
+  CsvPreviewResponseDto,
+} from './dto';
 import { JwtAuthGuard } from '../auth/guards';
 import { CurrentUser } from '../auth/decorators';
+
+const fileValidators = [
+  new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }),
+  new FileTypeValidator({
+    fileType:
+      /(text\/csv|application\/vnd.ms-excel|application\/vnd.openxmlformats-officedocument.spreadsheetml.sheet)/,
+  }),
+];
 
 @ApiTags('CSV')
 @ApiBearerAuth()
@@ -30,12 +43,12 @@ import { CurrentUser } from '../auth/decorators';
 export class CsvController {
   constructor(private readonly csvService: CsvService) {}
 
-  @Post('import')
+  @Post('preview')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({
-    summary: 'CSV/Excel 파일 임포트',
+    summary: 'CSV/Excel 미리보기 및 컬럼 자동추측',
     description:
-      '매물 데이터가 포함된 CSV 또는 Excel(xls, xlsx) 파일을 업로드하여 DB에 저장합니다.',
+      '파일을 파싱만 하여 헤더, 자동추측된 컬럼 매핑, 샘플 행을 반환합니다. DB에는 저장하지 않습니다.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -53,6 +66,46 @@ export class CsvController {
   })
   @ApiResponse({
     status: 201,
+    description: '미리보기 성공',
+    type: CsvPreviewResponseDto,
+  })
+  @ApiResponse({ status: 400, description: '잘못된 파일 형식 또는 데이터' })
+  @ApiResponse({ status: 401, description: '인증 필요' })
+  previewFile(
+    @UploadedFile(new ParseFilePipe({ validators: fileValidators }))
+    file: Express.Multer.File,
+  ): CsvPreviewResponseDto {
+    return this.csvService.preview(file);
+  }
+
+  @Post('import')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'CSV/Excel 파일 임포트',
+    description:
+      '매물 데이터가 포함된 CSV 또는 Excel(xls, xlsx) 파일을 업로드하여 DB에 저장합니다. columnMapping(필드키→컬럼명 JSON)을 함께 보내면 그 매핑으로 파싱합니다.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'CSV 또는 Excel 파일 (최대 10MB)',
+        },
+        columnMapping: {
+          type: 'string',
+          description:
+            '필드키 → 파일 컬럼명 매핑 JSON (예: {"complexName":"아파트명"}). 생략 시 헤더로 자동추측.',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
     description: '파일 임포트 성공',
     type: CsvImportResponseDto,
   })
@@ -60,20 +113,11 @@ export class CsvController {
   @ApiResponse({ status: 401, description: '인증 필요' })
   async importFile(
     @CurrentUser('userId') userId: string,
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }),
-          new FileTypeValidator({
-            fileType:
-              /(text\/csv|application\/vnd.ms-excel|application\/vnd.openxmlformats-officedocument.spreadsheetml.sheet)/,
-          }),
-        ],
-      }),
-    )
+    @UploadedFile(new ParseFilePipe({ validators: fileValidators }))
     file: Express.Multer.File,
+    @Body('columnMapping') columnMapping?: string,
   ): Promise<CsvImportResponseDto> {
-    return this.csvService.importFile(userId, file);
+    return this.csvService.importFile(userId, file, columnMapping);
   }
 
   @Get('export')

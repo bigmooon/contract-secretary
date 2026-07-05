@@ -29,3 +29,21 @@ export interface PickedFile {
   name: string;
   mimeType?: string;
 }
+
+/** 필드 → 사용자 파일의 실제 컬럼명 (서버 ColumnMapping과 일치) */
+export type ColumnMapping = Record<string, string>;
+
+export interface CsvField {
+  key: string;
+  label: string;
+  required: boolean;
+}
+
+/** 서버 CsvPreviewResponseDto와 일치 */
+export interface CsvPreviewResult {
+  headers: string[];
+  fields: CsvField[];
+  mapping: ColumnMapping;
+  sampleRows: Record<string, string>[];
+  totalRows: number;
+}

@@ -1,5 +1,11 @@
 import { get, post, API_ENDPOINTS } from '@/modules/common/api';
-import type { CsvImportResult, CsvExportResult, PickedFile } from '../types';
+import type {
+  CsvImportResult,
+  CsvExportResult,
+  CsvPreviewResult,
+  ColumnMapping,
+  PickedFile,
+} from '../types';
 
 /**
  * 파일명 확장자로 MIME 타입을 결정한다.
@@ -19,16 +25,41 @@ function mimeTypeFromName(name: string): string {
  */
 export class CsvService {
   /**
-   * 선택한 파일을 서버에 업로드하여 매물 데이터로 저장
+   * FormData에 선택 파일을 RN 형식({ uri, name, type })으로 추가
    */
-  static async importFile(file: PickedFile): Promise<CsvImportResult> {
-    const formData = new FormData();
-    // React Native FormData 파일 형식: { uri, name, type }
+  private static appendFile(formData: FormData, file: PickedFile): void {
     formData.append('file', {
       uri: file.uri,
       name: file.name,
       type: mimeTypeFromName(file.name),
     } as unknown as Blob);
+  }
+
+  /**
+   * 파일을 업로드해 헤더·자동추측 매핑·샘플 행을 받는다 (저장 안 함)
+   */
+  static async previewFile(file: PickedFile): Promise<CsvPreviewResult> {
+    const formData = new FormData();
+    this.appendFile(formData, file);
+
+    return post<CsvPreviewResult>(API_ENDPOINTS.csv.preview, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
+
+  /**
+   * 선택한 파일을 서버에 업로드하여 매물 데이터로 저장
+   * @param columnMapping 필드→컬럼 매핑 (생략 시 서버가 자동추측)
+   */
+  static async importFile(
+    file: PickedFile,
+    columnMapping?: ColumnMapping,
+  ): Promise<CsvImportResult> {
+    const formData = new FormData();
+    this.appendFile(formData, file);
+    if (columnMapping) {
+      formData.append('columnMapping', JSON.stringify(columnMapping));
+    }
 
     return post<CsvImportResult>(API_ENDPOINTS.csv.import, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

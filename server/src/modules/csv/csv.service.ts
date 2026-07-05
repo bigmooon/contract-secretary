@@ -3,7 +3,21 @@ import { ContractType, StakeholderRole } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import * as Papa from 'papaparse';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CsvImportResponseDto, CsvExportResponseDto } from './dto';
+import {
+  CsvImportResponseDto,
+  CsvExportResponseDto,
+  CsvPreviewResponseDto,
+} from './dto';
+import {
+  FIELD_DEFS,
+  FieldKey,
+  ColumnMapping,
+  guessMapping,
+  parseContractType,
+  parsePrice,
+  parseDate,
+  parseContacts,
+} from './csv-fields';
 
 interface ParsedPropertyRow {
   contractType: ContractType;
@@ -29,30 +43,48 @@ interface ParseError {
 export class CsvService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * 파일을 파싱만 해서 헤더 + 자동추측 매핑 + 샘플 몇 행을 돌려준다.
+   * 클라이언트 컬럼매핑 화면에서 사용. DB에는 쓰지 않는다.
+   */
+  preview(file: Express.Multer.File): CsvPreviewResponseDto {
+    const rawData = this.readFile(file);
+    if (rawData.length === 0) {
+      throw new BadRequestException('파일에 데이터가 없습니다.');
+    }
+
+    const headers = Object.keys(rawData[0]);
+
+    return {
+      headers,
+      fields: FIELD_DEFS.map((d) => ({
+        key: d.key,
+        label: d.label,
+        required: d.required,
+      })),
+      mapping: guessMapping(headers),
+      sampleRows: rawData.slice(0, 3).map((r) => this.stringifyRow(r)),
+      totalRows: rawData.length,
+    };
+  }
+
   async importFile(
     userId: string,
     file: Express.Multer.File,
+    columnMappingJson?: string,
   ): Promise<CsvImportResponseDto> {
     const fileName = file.originalname;
-    const extension = fileName.split('.').pop()?.toLowerCase();
-
-    let rawData: Record<string, unknown>[];
-
-    if (extension === 'xls' || extension === 'xlsx') {
-      rawData = this.parseExcel(file.buffer);
-    } else if (extension === 'csv') {
-      rawData = this.parseCsv(file.buffer);
-    } else {
-      throw new BadRequestException(
-        '지원하지 않는 파일 형식입니다. (xls, xlsx, csv만 지원)',
-      );
-    }
+    const rawData = this.readFile(file);
 
     if (rawData.length === 0) {
       throw new BadRequestException('파일에 데이터가 없습니다.');
     }
 
-    const { parsed, errors } = this.parseRows(rawData);
+    const headers = Object.keys(rawData[0]);
+    const mapping = this.resolveMapping(columnMappingJson, headers);
+    this.validateRequiredMapped(mapping);
+
+    const { parsed, errors } = this.parseRows(rawData, mapping);
 
     let successCount = 0;
     const failedErrors: ParseError[] = [...errors];
@@ -144,6 +176,8 @@ export class CsvService {
     const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
     const exportFileName = `properties_export_${today}.csv`;
 
+    // U+FEFF BOM so Excel detects UTF-8 (Korean). Escape, not a literal
+    // invisible char — editors/linters can silently strip the latter.
     const base64Data = Buffer.from('\uFEFF' + csv, 'utf-8').toString('base64');
 
     return {
@@ -151,6 +185,20 @@ export class CsvService {
       fileName: exportFileName,
       totalRows: rows.length,
     };
+  }
+
+  private readFile(file: Express.Multer.File): Record<string, unknown>[] {
+    const extension = file.originalname.split('.').pop()?.toLowerCase();
+
+    if (extension === 'xls' || extension === 'xlsx') {
+      return this.parseExcel(file.buffer);
+    }
+    if (extension === 'csv') {
+      return this.parseCsv(file.buffer);
+    }
+    throw new BadRequestException(
+      '지원하지 않는 파일 형식입니다. (xls, xlsx, csv만 지원)',
+    );
   }
 
   private parseExcel(buffer: Buffer): Record<string, unknown>[] {
@@ -190,7 +238,63 @@ export class CsvService {
     return result.data;
   }
 
-  private parseRows(rawData: Record<string, unknown>[]): {
+  /** 컬럼값을 문자열로 정규화 (샘플 미리보기용) */
+  private stringifyRow(row: Record<string, unknown>): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(row)) {
+      out[key] =
+        value === undefined || value === null ? '' : String(value).trim();
+    }
+    return out;
+  }
+
+  /**
+   * 클라이언트가 보낸 매핑 JSON을 파싱·검증한다.
+   * 없으면 헤더로 자동추측한다(구버전 클라이언트 호환).
+   */
+  private resolveMapping(
+    columnMappingJson: string | undefined,
+    headers: string[],
+  ): ColumnMapping {
+    if (!columnMappingJson) return guessMapping(headers);
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(columnMappingJson);
+    } catch {
+      throw new BadRequestException('컬럼 매핑 형식이 올바르지 않습니다.');
+    }
+
+    if (typeof parsed !== 'object' || parsed === null) {
+      throw new BadRequestException('컬럼 매핑 형식이 올바르지 않습니다.');
+    }
+
+    const source = parsed as Record<string, unknown>;
+    const mapping: ColumnMapping = {};
+    for (const def of FIELD_DEFS) {
+      const value = source[def.key];
+      if (typeof value === 'string' && value.trim()) {
+        mapping[def.key] = value;
+      }
+    }
+    return mapping;
+  }
+
+  private validateRequiredMapped(mapping: ColumnMapping): void {
+    const missing = FIELD_DEFS.filter((d) => d.required && !mapping[d.key]);
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `필수 항목의 컬럼을 지정해 주세요: ${missing
+          .map((d) => d.label)
+          .join(', ')}`,
+      );
+    }
+  }
+
+  private parseRows(
+    rawData: Record<string, unknown>[],
+    mapping: ColumnMapping,
+  ): {
     parsed: (ParsedPropertyRow & { originalRow: number })[];
     errors: ParseError[];
   } {
@@ -198,11 +302,9 @@ export class CsvService {
     const errors: ParseError[] = [];
 
     for (let i = 0; i < rawData.length; i++) {
-      const row = rawData[i];
       const rowNumber = i + 2;
-
       try {
-        const parsedRow = this.parseRow(row);
+        const parsedRow = this.parseRow(rawData[i], mapping);
         parsed.push({ ...parsedRow, originalRow: rowNumber });
       } catch (error) {
         errors.push({
@@ -215,187 +317,50 @@ export class CsvService {
     return { parsed, errors };
   }
 
-  private parseRow(row: Record<string, unknown>): ParsedPropertyRow {
-    const contractTypeRaw = this.getField(row, [
-      '매물',
-      '계약유형',
-      '유형',
-      'type',
-    ]);
-    const contractType = this.parseContractType(contractTypeRaw);
+  private parseRow(
+    row: Record<string, unknown>,
+    mapping: ColumnMapping,
+  ): ParsedPropertyRow {
+    const get = (key: FieldKey): string => this.mappedValue(row, mapping, key);
 
-    const complexName = this.getField(row, [
-      '아파트명',
-      '단지명',
-      '건물명',
-      'complexName',
-    ]);
-    if (!complexName) {
-      throw new Error('아파트명은 필수 입력 항목입니다.');
-    }
+    const complexName = get('complexName');
+    if (!complexName) throw new Error('아파트명은 필수 입력 항목입니다.');
 
-    const buildingName = this.getField(row, ['동', 'building', 'buildingName']);
-    if (!buildingName) {
-      throw new Error('동은 필수 입력 항목입니다.');
-    }
+    const buildingName = get('buildingName');
+    if (!buildingName) throw new Error('동은 필수 입력 항목입니다.');
 
-    const unitNo = this.getField(row, ['호수', '호', 'unit', 'unitNo']);
-    if (!unitNo) {
-      throw new Error('호수는 필수 입력 항목입니다.');
-    }
+    const unitNo = get('unitNo');
+    if (!unitNo) throw new Error('호수는 필수 입력 항목입니다.');
 
-    const typeInfo =
-      this.getField(row, ['타입', '평수', '평형', 'typeInfo']) || null;
-
-    const depositRaw = this.getField(row, [
-      '매매가(보증금)',
-      '보증금',
-      '매매가',
-      'deposit',
-      'depositPrice',
-    ]);
-    const depositPrice = this.parsePrice(depositRaw);
-
-    const monthlyRentRaw = this.getField(row, ['월세', 'monthlyRent', 'rent']);
-    const monthlyRent = monthlyRentRaw ? this.parsePrice(monthlyRentRaw) : 0n;
-
-    const contractDateRaw = this.getField(row, [
-      '계약일 (예상)',
-      '계약일',
-      'contractDate',
-    ]);
-    const contractDate = this.parseDate(contractDateRaw);
-
-    const expirationDateRaw = this.getField(row, [
-      '만기일 (예상)',
-      '만기일',
-      'expirationDate',
-    ]);
-    const expirationDate = this.parseDate(expirationDateRaw);
-
-    const ownerContactRaw = this.getField(row, [
-      '주인 연락처',
-      '주인연락처',
-      '임대인',
-      'ownerContact',
-    ]);
-    const ownerContacts = this.parseContacts(ownerContactRaw);
-
-    const tenantContactRaw = this.getField(row, [
-      '세입자 연락처',
-      '세입자연락처',
-      '임차인',
-      'tenantContact',
-    ]);
-    const tenantContacts = this.parseContacts(tenantContactRaw);
-
-    const note =
-      this.getField(row, ['특이사항, 비고', '특이사항', '비고', 'note']) ||
-      null;
+    const monthlyRentRaw = get('monthlyRent');
 
     return {
-      contractType,
+      contractType: parseContractType(get('contractType')),
       complexName,
       buildingName,
       unitNo,
-      typeInfo,
-      depositPrice,
-      monthlyRent,
-      contractDate,
-      expirationDate,
-      ownerContacts,
-      tenantContacts,
-      note,
+      typeInfo: get('typeInfo') || null,
+      depositPrice: parsePrice(get('depositPrice')),
+      monthlyRent: monthlyRentRaw ? parsePrice(monthlyRentRaw) : 0n,
+      contractDate: parseDate(get('contractDate')),
+      expirationDate: parseDate(get('expirationDate')),
+      ownerContacts: parseContacts(get('ownerContact')),
+      tenantContacts: parseContacts(get('tenantContact')),
+      note: get('note') || null,
     };
   }
 
-  private getField(
+  /** 매핑된 컬럼에서 값을 꺼내 문자열로 */
+  private mappedValue(
     row: Record<string, unknown>,
-    possibleKeys: string[],
+    mapping: ColumnMapping,
+    key: FieldKey,
   ): string {
-    for (const key of possibleKeys) {
-      const value = row[key];
-      if (value !== undefined && value !== null && value !== '') {
-        return String(value).trim();
-      }
-    }
-    return '';
-  }
-
-  private parseContractType(value: string): ContractType {
-    const normalized = value.toLowerCase().trim();
-
-    if (normalized.includes('전세') || normalized === 'jeonse') {
-      return ContractType.JEONSE;
-    }
-    if (normalized.includes('월세') || normalized === 'wolse') {
-      return ContractType.WOLSE;
-    }
-    if (normalized.includes('매매') || normalized === 'maemae') {
-      return ContractType.MAEMAE;
-    }
-
-    return ContractType.JEONSE;
-  }
-
-  private parsePrice(value: string): bigint {
-    if (!value) return 0n;
-
-    const cleanValue = value.replace(/[^0-9.]/g, '');
-    if (!cleanValue) return 0n;
-
-    const num = parseFloat(cleanValue);
-    if (isNaN(num)) return 0n;
-
-    return BigInt(Math.round(num));
-  }
-
-  private parseDate(value: string): Date | null {
-    if (!value) return null;
-
-    const datePatterns = [
-      /^(\d{4})[-./](\d{1,2})[-./](\d{1,2})$/,
-      /^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/,
-      /^(\d{4})(\d{2})(\d{2})$/,
-    ];
-
-    for (const pattern of datePatterns) {
-      const match = value.match(pattern);
-      if (match) {
-        let year: number, month: number, day: number;
-
-        if (pattern === datePatterns[1]) {
-          month = parseInt(match[1], 10);
-          day = parseInt(match[2], 10);
-          year = parseInt(match[3], 10);
-        } else {
-          year = parseInt(match[1], 10);
-          month = parseInt(match[2], 10);
-          day = parseInt(match[3], 10);
-        }
-
-        const date = new Date(year, month - 1, day);
-        if (!isNaN(date.getTime())) {
-          return date;
-        }
-      }
-    }
-
-    const parsed = new Date(value);
-    if (!isNaN(parsed.getTime())) {
-      return parsed;
-    }
-
-    return null;
-  }
-
-  private parseContacts(value: string): string[] {
-    if (!value) return [];
-
-    return value
-      .split(/[,;/\n]/)
-      .map((contact) => contact.replace(/[^0-9-]/g, '').trim())
-      .filter((contact) => contact.length >= 8);
+    const column = mapping[key];
+    if (!column) return '';
+    const value = row[column];
+    if (value === undefined || value === null || value === '') return '';
+    return String(value).trim();
   }
 
   private async createPropertyWithContract(
