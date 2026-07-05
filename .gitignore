@@ -57,9 +57,11 @@ etc/
 # Database diagrams
 *.erd.json
 
-# Prisma generated files 
+# Prisma generated files
 **/generated/prisma/
 *.sql
+# but keep Prisma migration SQL (must be committed)
+!server/prisma/migrations/**/*.sql
 
 # Docker volumes
 postgres-data/
