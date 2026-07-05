@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icons/logo-icon.svg",
     "scheme": "contractsecretary",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
     },

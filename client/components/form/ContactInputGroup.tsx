@@ -25,7 +25,6 @@ export function ContactInputGroup({
   onChange,
 }: ContactInputGroupProps) {
   const theme = useTheme();
-  const isDark = theme.scheme === 'dark';
 
   const handleContactChange = (
     index: number,
@@ -66,7 +65,7 @@ export function ContactInputGroup({
               },
             ]}
             placeholder="이름 (선택)"
-            placeholderTextColor={isDark ? '#6A7282' : '#9BA7B4'}
+            placeholderTextColor="#9BA7B4"
             value={contact.name || ''}
             onChangeText={(value) => handleContactChange(index, 'name', value)}
           />
@@ -81,7 +80,7 @@ export function ContactInputGroup({
               },
             ]}
             placeholder="전화번호"
-            placeholderTextColor={isDark ? '#6A7282' : '#9BA7B4'}
+            placeholderTextColor="#9BA7B4"
             value={contact.phone}
             onChangeText={(value) => handleContactChange(index, 'phone', value)}
             keyboardType="phone-pad"
