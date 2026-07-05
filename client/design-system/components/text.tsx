@@ -5,14 +5,9 @@ import { textStyles } from '../tokens/typography';
 
 export type ThemedTextProps = TextProps & {
   /**
-   * Override color for light mode
+   * Override text color
    */
   lightColor?: string;
-
-  /**
-   * Override color for dark mode
-   */
-  darkColor?: string;
 
   /**
    * Predefined text style variant
@@ -32,11 +27,10 @@ export type ThemedTextProps = TextProps & {
 export function Text({
   style,
   lightColor,
-  darkColor,
   variant = 'body',
   ...rest
 }: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  const color = useThemeColor({ light: lightColor }, 'text');
   const variantStyle = textStyles[variant];
 
   return <RNText style={[{ color }, variantStyle, style]} {...rest} />;

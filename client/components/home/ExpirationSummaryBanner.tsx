@@ -57,7 +57,6 @@ export function ExpirationSummaryBanner({
     <ThemedView
       style={[styles.container, shadows.card]}
       lightColor={cardColor}
-      darkColor={cardColor}
     >
       <View style={styles.content}>
         {/* 제목 */}

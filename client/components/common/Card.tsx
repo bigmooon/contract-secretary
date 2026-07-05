@@ -54,7 +54,6 @@ export function Card({ property }: CardProps) {
           },
         ]}
         lightColor={colors.light.card}
-        darkColor={colors.dark.card}
       >
         <View style={styles.cardHeader}>
           <PropertyTypeBadge type={property.type} size="medium" />

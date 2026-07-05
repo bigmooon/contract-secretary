@@ -20,7 +20,6 @@ interface ContactItemProps {
 
 function ContactItem({ label, contact }: ContactItemProps) {
   const theme = useTheme();
-  const isDark = theme.scheme === 'dark';
 
   const handleCall = () => {
     const phoneNumber = contact.phone.replace(/[^0-9]/g, '');
@@ -32,8 +31,7 @@ function ContactItem({ label, contact }: ContactItemProps) {
       <Text
         variant="body"
         style={styles.contactLabel}
-        lightColor={isDark ? undefined : '#6A7282'}
-        darkColor={isDark ? '#9BA7B4' : undefined}
+        lightColor="#6A7282"
       >
         {label}
       </Text>
@@ -49,7 +47,6 @@ function ContactItem({ label, contact }: ContactItemProps) {
 
 export function ContactMemo({ property }: ContactMemoProps) {
   const theme = useTheme();
-  const isDark = theme.scheme === 'dark';
 
   return (
     <DetailCard title="연락처 & 메모">
@@ -79,11 +76,7 @@ export function ContactMemo({ property }: ContactMemoProps) {
 
       {property.notes && (
         <View style={styles.notesContainer}>
-          <Text
-            variant="body"
-            lightColor={isDark ? undefined : '#6A7282'}
-            darkColor={isDark ? '#9BA7B4' : undefined}
-          >
+          <Text variant="body" lightColor="#6A7282">
             메모
           </Text>
           <View

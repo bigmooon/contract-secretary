@@ -82,7 +82,6 @@ export function PropertyListCard({ property }: PropertyListCardProps) {
           },
         ]}
         lightColor={theme.colors.card}
-        darkColor={theme.colors.card}
       >
         {/* 헤더: 타입 뱃지 + 주소 + D-Day */}
         <View style={styles.cardHeader}>

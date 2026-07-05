@@ -8,14 +8,9 @@ import { useThemeColor } from '../theme';
 
 export type ThemedViewProps = ViewProps & {
   /**
-   * Override background color for light mode
+   * Override background color
    */
   lightColor?: string;
-
-  /**
-   * Override background color for dark mode
-   */
-  darkColor?: string;
 };
 
 /**
@@ -26,20 +21,12 @@ export type ThemedViewProps = ViewProps & {
  *   <Text>Content</Text>
  * </View>
  *
- * <View lightColor="#fff" darkColor="#000">
+ * <View lightColor="#fff">
  *   <Text>Custom background</Text>
  * </View>
  */
-export function View({
-  style,
-  lightColor,
-  darkColor,
-  ...otherProps
-}: ThemedViewProps) {
-  const backgroundColor = useThemeColor(
-    { light: lightColor, dark: darkColor },
-    'background'
-  );
+export function View({ style, lightColor, ...otherProps }: ThemedViewProps) {
+  const backgroundColor = useThemeColor({ light: lightColor }, 'background');
 
   return <RNView style={[{ backgroundColor }, style]} {...otherProps} />;
 }

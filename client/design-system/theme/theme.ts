@@ -29,17 +29,8 @@ export function createTheme(scheme: ColorScheme) {
 }
 
 /**
- * Light theme
+ * Light theme — the app is light-only (dark mode removed).
  */
 export const lightTheme = createTheme('light');
 
-/**
- * Dark theme
- */
-export const darkTheme = createTheme('dark');
-
-/**
- * Theme type derived from the light theme
- * Both light and dark themes share the same structure
- */
 export type Theme = typeof lightTheme;

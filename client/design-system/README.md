@@ -39,17 +39,17 @@ import {
 
 ### Colors (`tokens/colors.ts`)
 
-Color palette and theme colors for light and dark modes.
+Color palette and theme colors. The app is light-only.
 
 ```tsx
 import { colors } from '@/design-system';
 
 // Access palette
-colors.palette.blue400
+colors.palette.blue600
 
 // Access theme colors
 colors.light.primary
-colors.dark.background
+colors.light.background
 
 // Semantic colors
 colors.light.error
@@ -160,20 +160,19 @@ function MyComponent() {
 
 #### `useColorScheme()`
 
-Get the device color scheme ('light' or 'dark').
+Always returns `'light'` (the app is light-only).
 
 ```tsx
 import { useColorScheme } from '@/design-system';
 
 function MyComponent() {
-  const colorScheme = useColorScheme();
-  // 'light' | 'dark' | null
+  const colorScheme = useColorScheme(); // 'light'
 }
 ```
 
 #### `useThemeColor()`
 
-Get a specific color from the theme with optional overrides.
+Get a specific color from the theme with an optional override.
 
 ```tsx
 import { useThemeColor } from '@/design-system';
@@ -182,11 +181,8 @@ function MyComponent() {
   // Use theme color
   const backgroundColor = useThemeColor({}, 'background');
 
-  // Override theme colors
-  const customColor = useThemeColor(
-    { light: '#fff', dark: '#000' },
-    'card'
-  );
+  // Override
+  const customColor = useThemeColor({ light: '#fff' }, 'card');
 }
 ```
 
@@ -203,11 +199,10 @@ import { Text } from '@/design-system';
 <Text variant="body">Body text</Text>
 <Text variant="caption">Small text</Text>
 
-// Override colors
+// Override color
 <Text
   variant="body"
   lightColor="#333"
-  darkColor="#ccc"
 >
   Custom colored text
 </Text>
@@ -223,8 +218,7 @@ import { Text } from '@/design-system';
 
 **Props:**
 - `variant` - Typography variant (h1, h2, h3, h4, body, bodySemiBold, caption, label, link, etc.)
-- `lightColor` - Override color for light mode
-- `darkColor` - Override color for dark mode
+- `lightColor` - Override text color
 - All standard React Native Text props
 
 ### View Component
@@ -238,10 +232,9 @@ import { View } from '@/design-system';
   <Text>Content</Text>
 </View>
 
-// Override background colors
+// Override background color
 <View
   lightColor="#fff"
-  darkColor="#000"
 >
   <Text>Custom background</Text>
 </View>
@@ -256,8 +249,7 @@ import { View } from '@/design-system';
 ```
 
 **Props:**
-- `lightColor` - Override background color for light mode
-- `darkColor` - Override background color for dark mode
+- `lightColor` - Override background color
 - All standard React Native View props
 
 ## Usage Examples
