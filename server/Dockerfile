@@ -9,7 +9,8 @@ RUN apk add --no-cache \
     openssl-dev
 
 # Install pnpm and nest CLI globally
-RUN corepack enable && corepack prepare pnpm@latest --activate && \
+# pnpm 11+ requires Node 22.13+ (node:sqlite), so pin to the version used locally
+RUN corepack enable && corepack prepare pnpm@9.15.1 --activate && \
     npm install -g @nestjs/cli
 
 WORKDIR /app
@@ -96,7 +97,7 @@ ENV NODE_ENV=production
 RUN apk add --no-cache openssl
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@9.15.1 --activate
 
 # Copy package.json
 COPY package.json ./
