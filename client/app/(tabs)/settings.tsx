@@ -14,9 +14,9 @@ import {
   useTheme,
 } from '@/design-system';
 import { useAuthStore } from '@/modules/auth';
-import { useCsvImport, useCsvExport } from '@/modules/csv';
-import { usePropertiesStore } from '@/modules/properties/stores/propertiesStore';
+import { useCsvExport } from '@/modules/csv';
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
@@ -118,34 +118,17 @@ function SettingsSection({ title, children }: SettingsSectionProps) {
 
 export default function SettingsScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { user, logout, isLoading } = useAuthStore();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
-  const { importFromFile, isImporting } = useCsvImport(() => {
-    // 가져오기 성공 시 매물 목록 새로고침
-    void usePropertiesStore.getState().refreshProperties();
-  });
   const { exportToFile, isExporting } = useCsvExport();
 
-  const handleImport = async () => {
-    try {
-      const result = await importFromFile();
-      if (!result) return; // 사용자가 취소함
-      const failMsg = result.failedCount
-        ? `\n실패 ${result.failedCount}건은 형식을 확인해 주세요.`
-        : '';
-      Alert.alert(
-        '가져오기 완료',
-        `총 ${result.totalRows}건 중 ${result.successCount}건을 저장했습니다.${failMsg}`
-      );
-    } catch (error) {
-      Alert.alert(
-        '가져오기 실패',
-        'CSV 또는 엑셀 파일인지, 양식이 올바른지 확인해 주세요.'
-      );
-    }
+  const handleImport = () => {
+    // 파일 선택 → 컬럼 연결 화면에서 매핑 확인 후 가져오기
+    router.push('/csv/import');
   };
 
   const handleExport = async () => {
@@ -208,8 +191,7 @@ export default function SettingsScreen() {
           <SettingsItem
             icon="square.and.arrow.down"
             label="파일에서 가져오기 (CSV·엑셀)"
-            value={isImporting ? '가져오는 중…' : undefined}
-            onPress={isImporting ? undefined : handleImport}
+            onPress={handleImport}
           />
           <SettingsItem
             icon="square.and.arrow.up"

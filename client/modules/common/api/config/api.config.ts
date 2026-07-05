@@ -88,6 +88,7 @@ export const API_ENDPOINTS = {
     delete: (id: string) => `/contracts/${id}`,
   },
   csv: {
+    preview: '/csv/preview',
     import: '/csv/import',
     export: '/csv/export',
   },
